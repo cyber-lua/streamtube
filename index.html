@@ -1,0 +1,232 @@
+<body>
+    <header>
+        <div class="header-content">
+            <h1>StreamTube</h1>
+            <input type="text" id="videoUrl" placeholder="Enter YouTube video URL">
+            <select id="resolutionSelect">
+                <option value="360">360p</option>
+                <option value="480">480p</option>
+                <option value="720" selected>720p</option>
+                <option value="1080">1080p</option>
+            </select>
+            <button id="fetchVideo">Fetch Video</button>
+            <style>
+                body {
+                    font-family: 'Roboto', sans-serif;
+                    margin: 0;
+                    padding: 0;
+                    background-color: #f5f5f5;
+                    color: #333;
+                }
+
+                header {
+                    display: flex;
+                    align-items: center;
+                    background-color: #ffffff;
+                    border-bottom: 1px solid #e0e0e0;
+                    padding: 10px 20px;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                    position: fixed;
+                    width: 100%;
+                    top: 0;
+                    z-index: 1000;
+                }
+
+                .header-content {
+                    display: flex;
+                    align-items: center;
+                    width: 100%;
+                    max-width: 1200px;
+                    margin: 0 auto;
+                }
+
+                .header-content h1 {
+                    font-size: 24px;
+                    margin: 0;
+                    color: #333;
+                    flex: 1;
+                }
+
+                .header-content input[type="text"] {
+                    flex: 1;
+                    padding: 10px;
+                    margin: 0 20px;
+                    border: 1px solid #ccc;
+                    border-radius: 2px;
+                    font-size: 16px;
+                    outline: none;
+                }
+
+                .header-content input[type="text"]:focus {
+                    border-color: #1e88e5;
+                }
+
+                .header-content select {
+                    padding: 10px;
+                    margin: 0 20px;
+                    border: 1px solid #ccc;
+                    border-radius: 2px;
+                    font-size: 16px;
+                    outline: none;
+                }
+
+                .header-content button {
+                    padding: 10px 20px;
+                    background-color: #ff0000;
+                    color: #fff;
+                    border: none;
+                    border-radius: 2px;
+                    font-size: 16px;
+                    cursor: pointer;
+                    transition: background-color 0.3s ease;
+                }
+
+                .header-content button:hover {
+                    background-color: #cc0000;
+                }
+
+                .container {
+                    margin: 80px auto 20px auto;
+                    max-width: 1200px;
+                    padding: 0 20px;
+                }
+
+                .info {
+                    margin-bottom: 20px;
+                }
+
+                .info p {
+                    margin: 0 0 10px 0;
+                    font-size: 16px;
+                }
+
+                .info a {
+                    color: #1e88e5;
+                    text-decoration: none;
+                    font-size: 16px;
+                }
+
+                .info a:hover {
+                    text-decoration: underline;
+                }
+
+                #videoPlayer {
+                    margin-top: 20px;
+                    width: 100%;
+                    max-width: 800px;
+                    background: #000;
+                    border-radius: 4px;
+                    overflow: hidden;
+                }
+
+                #downloadLinks {
+                    margin-top: 20px;
+                }
+
+                #downloadLinks a {
+                    display: block;
+                    margin: 5px 0;
+                    color: #1e88e5;
+                    text-decoration: none;
+                    font-size: 16px;
+                }
+
+                #downloadLinks a:hover {
+                    text-decoration: underline;
+                }
+
+                #errorMessage {
+                    color: #ff0000;
+                    margin-top: 20px;
+                }
+            </style>
+        </div>
+    </header>
+    <div class="container">
+        <section class="info">
+            <p>StreamTube streams your selected video from YouTube using the Cobalt API (Thanks Cobalt, you are the lord and savior of this project :D). No ads, no trackers...</p>
+            <a href="https://cobalt.tools/" target="_blank" rel="noopener noreferrer">Thank you Cobalt for having such a nice API</a>
+        </section>
+        <div id="videoPlayer"></div>
+        <div id="downloadLinks"></div>
+        <div id="errorMessage"></div>
+    </div>
+    <script>
+        document.getElementById('fetchVideo').addEventListener('click', () => {
+            const url = document.getElementById('videoUrl').value;
+            const resolution = document.getElementById('resolutionSelect').value;
+            fetchVideoData(url, resolution);
+        });
+
+        async function fetchVideoData(url, resolution) {
+            const apiUrl = 'https://api.cobalt.tools/api/json';
+            const headers = {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            };
+            
+            const body = JSON.stringify({
+                url: url,
+                vCodec: 'h264',
+                vQuality: resolution,
+                aFormat: 'mp3',
+                filenamePattern: 'classic',
+                isAudioOnly: false
+            });
+            
+            try {
+                const response = await fetch(apiUrl, { method: 'POST', headers: headers, body: body });
+                const data = await response.json();
+                console.log('API Response:', data); // Debugging: Log the API response
+                handleApiResponse(data);
+            } catch (error) {
+                console.error('Error fetching video data:', error);
+                document.getElementById('errorMessage').innerHTML = `<p>Error: ${error.message}</p>`;
+            }
+        }
+
+        function handleApiResponse(data) {
+            const videoPlayer = document.getElementById('videoPlayer');
+            const downloadLinks = document.getElementById('downloadLinks');
+            const errorMessage = document.getElementById('errorMessage');
+
+            videoPlayer.innerHTML = '';
+            downloadLinks.innerHTML = '';
+            errorMessage.innerHTML = '';
+
+            if (data.status === 'stream') {
+                // Display video player for streaming
+                if (data.url) {
+                    videoPlayer.innerHTML = `
+                        <video controls width="100%">
+                            <source src="${data.url}" type="video/mp4">
+                            Your browser does not support the video tag.
+                        </video>
+                    `;
+                    errorMessage.innerHTML = `<p>Streaming URL is available. Please use the player above to watch.</p>`;
+                }
+            } else if (data.status === 'success') {
+                // Display video player for download
+                if (data.url) {
+                    videoPlayer.innerHTML = `
+                        <video controls width="100%">
+                            <source src="${data.url}" type="video/mp4">
+                            Your browser does not support the video tag.
+                        </video>
+                    `;
+                }
+
+                // Display download links
+                if (data.audio) {
+                    downloadLinks.innerHTML += `<a href="${data.audio}" download="audio.mp3">Download Audio</a>`;
+                }
+
+                if (data.url) {
+                    downloadLinks.innerHTML += `<a href="${data.url}" download="video.mp4">Download Video</a>`;
+                }
+            } else {
+                errorMessage.innerHTML = `<p>Error: ${data.text || 'Unknown error occurred'}</p>`;
+            }
+        }
+    </script>
+</body>
